@@ -38,21 +38,21 @@ ENV/
 *.ipynb_checkpoints/
 
 # Data
-data/caltech-101/
+data/101_ObjectCategories/
 data/*.zip
 data/*.tar.gz
 
-# Models
-models/*.pth
-models/*.pt
-models/*.pkl
-models/*.h5
+# Models - Keep all trained models
+# models/*.pth
+# models/*.pt
+# models/*.pkl
+# models/*.h5
 
-# Results
-results/figures/*.png
-results/figures/*.pdf
-results/metrics/*.json
-results/metrics/*.csv
+# Results - Keep all results
+# results/figures/*.png
+# results/figures/*.pdf
+# results/metrics/*.json
+# results/metrics/*.csv
 
 # Logs
 logs/
