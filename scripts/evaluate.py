@@ -43,8 +43,14 @@ def evaluate_deep_learning_model(model_path: str, args):
     )
     
     # Initialize model
+    # For ViT and some models, keep full name; for others, extract first part
+    if 'vit' in model_name or 'efficientnet' in model_name:
+        model_arch = model_name
+    else:
+        model_arch = model_name.split('_')[0]
+    
     model = get_model(
-        model_name=model_name.split('_')[0],  # Extract model type
+        model_name=model_arch,
         num_classes=len(class_names),
         pretrained=False
     )
@@ -229,7 +235,7 @@ def main():
                 class_names=class_names,
                 save_path=cm_path,
                 normalize=True,
-                title=f'{model_name.upper()} - Confusion Matrix (Normalized)'
+                title=f'{model_name.upper()} - Confusion Matrix'
             )
             
             # Plot per-class accuracy

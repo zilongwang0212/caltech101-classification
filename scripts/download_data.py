@@ -4,26 +4,62 @@ Download and prepare Caltech-101 dataset
 
 import os
 import sys
-import zipfile
+import shutil
 import argparse
 from pathlib import Path
-import urllib.request
-from tqdm import tqdm
+import kagglehub
 
 
-class DownloadProgressBar(tqdm):
-    """Progress bar for download."""
+def download_caltech101_kagglehub(data_dir: str):
+    """Download Caltech-101 dataset using kagglehub."""
+    print("\nDownloading Caltech-101 dataset using kagglehub...")
+    print("This may take a few minutes depending on your internet connection...")
     
-    def update_to(self, b=1, bsize=1, tsize=None):
-        if tsize is not None:
-            self.total = tsize
-        self.update(b * bsize - self.n)
-
-
-def download_url(url: str, output_path: str):
-    """Download file from URL with progress bar."""
-    with DownloadProgressBar(unit='B', unit_scale=True, miniters=1, desc=url.split('/')[-1]) as t:
-        urllib.request.urlretrieve(url, filename=output_path, reporthook=t.update_to)
+    try:
+        # Download latest version
+        download_path = kagglehub.dataset_download("imbikramsaha/caltech-101")
+        print(f"\n✓ Dataset downloaded to: {download_path}")
+        
+        # Copy to target directory if different
+        target_dir = Path(data_dir)
+        source_dir = Path(download_path)
+        
+        # Find 101_ObjectCategories directory or caltech-101 directory with categories
+        object_categories = None
+        
+        # Check for 101_ObjectCategories
+        for item in source_dir.rglob("101_ObjectCategories"):
+            if item.is_dir():
+                object_categories = item
+                break
+        
+        # If not found, check for caltech-101 directory with image categories
+        if not object_categories:
+            caltech_dir = source_dir / "caltech-101"
+            if caltech_dir.exists() and caltech_dir.is_dir():
+                # Check if it contains category directories
+                subdirs = [d for d in caltech_dir.iterdir() if d.is_dir()]
+                if len(subdirs) > 50:  # Caltech-101 has 101 categories
+                    object_categories = caltech_dir
+        
+        if object_categories:
+            target_path = target_dir / "101_ObjectCategories"
+            if not target_path.exists():
+                print(f"\nCopying dataset to {target_path}...")
+                shutil.copytree(object_categories, target_path, dirs_exist_ok=True)
+                print("✓ Dataset copied successfully!")
+            return True
+        else:
+            print("⚠ Could not find dataset categories in downloaded data")
+            print(f"  Downloaded path: {download_path}")
+            print(f"  Contents: {list(source_dir.iterdir())}")
+            return False
+            
+    except Exception as e:
+        print(f"\n✗ Error downloading dataset: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 
 def download_caltech101_manual():
@@ -72,8 +108,8 @@ def verify_dataset(data_dir: str):
     ]
     
     for path in possible_paths:
-        if path.exists():
-            categories = [d for d in path.iterdir() if d.is_dir()]
+        if path.exists() and path.is_dir():
+            categories = [d for d in path.iterdir() if d.is_dir() and not d.name.startswith('.')]
             num_categories = len(categories)
             
             if num_categories > 0:
@@ -88,11 +124,11 @@ def verify_dataset(data_dir: str):
                     total_images += len(images)
                 
                 print(f"  Total images: {total_images}")
-                return True
+                return str(path)
     
     print("\n✗ Dataset structure not found!")
     print(f"  Please ensure the dataset is extracted properly in: {data_dir}")
-    return False
+    return None
 
 
 def main():
@@ -114,27 +150,21 @@ def main():
     print("="*80)
     
     # Check if dataset already exists
-    zip_path = data_dir / "caltech-101.zip"
-    
-    if verify_dataset(str(data_dir)):
+    existing_path = verify_dataset(str(data_dir))
+    if existing_path:
         print("\n✓ Dataset already exists and is ready to use!")
+        print(f"  Use this path: {existing_path}")
         return
     
-    # Check if zip file exists
-    if zip_path.exists():
-        print(f"\nFound existing zip file: {zip_path}")
-        extract_dataset(str(zip_path), str(data_dir))
+    # Download using kagglehub
+    print("\nDownloading dataset using kagglehub...")
+    if download_caltech101_kagglehub(str(data_dir)):
         verify_dataset(str(data_dir))
+        print("\n✓ Dataset is ready to use!")
     else:
+        print("\n⚠ Download failed. Showing manual download instructions...")
         download_caltech101_manual()
-        
-        # Check again if user has downloaded manually
-        if zip_path.exists():
-            extract_dataset(str(zip_path), str(data_dir))
-            verify_dataset(str(data_dir))
-        else:
-            print("\n⚠ No dataset found. Please follow the manual download instructions above.")
-            sys.exit(1)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
